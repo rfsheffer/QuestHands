@@ -1,4 +1,4 @@
-// Copyright 2020 Sheffer Online Services. All Rights Reserved.
+// Copyright(c) 2020 Sheffer Online Services
 
 using UnrealBuildTool;
 using System.IO;
@@ -9,7 +9,7 @@ public class QuestHands : ModuleRules
 	public QuestHands(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-		OptimizeCode = CodeOptimization.Never;
+		//OptimizeCode = CodeOptimization.Never;
 		
 		PublicDependencyModuleNames.AddRange(
 			new string[]

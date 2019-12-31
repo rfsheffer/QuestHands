@@ -1,4 +1,4 @@
-// Copyright 2020 Sheffer Online Services. All Rights Reserved.
+// Copyright(c) 2020 Sheffer Online Services
 
 #pragma once
 
@@ -28,6 +28,7 @@ public:
 
     virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
 
+    // Is hand tracking currently enabled by the user? Returns false if the user has hand tracking disabled on their Oculus Dashboard.
     UFUNCTION(BlueprintPure, Category = "QuestHands")
     bool IsHandTrackingAvailable();
 
@@ -70,6 +71,14 @@ public:
 	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "QuestHands", meta = (SkipUCSModifiedProperties, EditCondition = "UpdatePhysicsCapsules"))
 	//FBodyInstance CapsuleBodyData;
 
+    // Used to correct the rotation from the Oculus hand bone rotations to conform to your mesh
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "QuestHands")
+    FRotator LeftHandBoneRotationOffset;
+
+    // Used to correct the rotation from the Oculus hand bone rotations to conform to your mesh
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "QuestHands")
+    FRotator RightHandBoneRotationOffset;
+
     // The current left hand skeleton data
     UPROPERTY(BlueprintReadWrite, Category = "QuestHands")
     FQHandSkeleton LeftHandSkeletonData;
@@ -87,6 +96,7 @@ public:
     FQHandTrackingState RightHandTrackingData;
 
 protected:
+
     // Left hand poseable mesh component
     UPROPERTY(BlueprintReadOnly, Category = "QuestHands")
     class UPoseableMeshComponent* leftPoseable;
@@ -106,6 +116,6 @@ protected:
 private:
 
     void UpdateHandTrackingData();
-    void SetupBoneTransforms(const FQHandSkeleton& skeleton, const FQHandTrackingState& trackingState, TArray<FTransform>& boneTransforms);
+    void SetupBoneTransforms(const FQHandSkeleton& skeleton, const FQHandTrackingState& trackingState, TArray<FTransform>& boneTransforms, bool leftHand);
     void UpdatePoseableWithBoneTransforms(class UPoseableMeshComponent* poseable, const TArray<FTransform>& boneTransforms);
 };

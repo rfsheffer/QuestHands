@@ -1,4 +1,4 @@
-// Copyright 2020 Sheffer Online Services. All Rights Reserved.
+// Copyright(c) 2020 Sheffer Online Services
 
 using UnrealBuildTool;
 using System.Collections.Generic;

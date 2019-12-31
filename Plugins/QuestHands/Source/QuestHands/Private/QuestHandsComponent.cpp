@@ -1,4 +1,4 @@
-// 2020 Sheffer Online Services. Released under the MIT license.
+// Copyright(c) 2020 Sheffer Online Services
 
 #include "QuestHandsComponent.h"
 #include "GameFramework/WorldSettings.h"
@@ -9,8 +9,8 @@
 /**
 */
 UQuestHandsComponent::UQuestHandsComponent() :
-      CreateHandMeshComponents(false)
-    , UpdateHandMeshComponents(false)
+      CreateHandMeshComponents(true)
+    , UpdateHandMeshComponents(true)
     , LeftHandMesh(nullptr)
     , RightHandMesh(nullptr)
     , UpdateHandScale(true)
@@ -168,14 +168,14 @@ void UQuestHandsComponent::UpdateHandTrackingData()
     UQuestHandsFunctions::GetTrackingState_Internal(EControllerHand::Right, RightHandTrackingData, worldToMeters);
 
     // Update our cached skeleton bone transforms
-    SetupBoneTransforms(LeftHandSkeletonData, LeftHandTrackingData, leftHandBones);
-    SetupBoneTransforms(RightHandSkeletonData, RightHandTrackingData, rightHandBones);
+    SetupBoneTransforms(LeftHandSkeletonData, LeftHandTrackingData, leftHandBones, true);
+    SetupBoneTransforms(RightHandSkeletonData, RightHandTrackingData, rightHandBones, false);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 /**
 */
-void UQuestHandsComponent::SetupBoneTransforms(const FQHandSkeleton& skeleton, const FQHandTrackingState& trackingState, TArray<FTransform>& boneTransforms)
+void UQuestHandsComponent::SetupBoneTransforms(const FQHandSkeleton& skeleton, const FQHandTrackingState& trackingState, TArray<FTransform>& boneTransforms, bool leftHand)
 {
     // Don't do anything if we aren't tracked, but make sure we at least have a base line if it hasn't been established yet.
     if(!trackingState.IsTracked && boneTransforms.Num() == skeleton.Bones.Num())
@@ -191,7 +191,22 @@ void UQuestHandsComponent::SetupBoneTransforms(const FQHandSkeleton& skeleton, c
         {
             UE_LOG(LogQuestHands, Warning, TEXT("UQuestHandsComponent::SetupBoneTransforms - bone ID mismatch!"));
         }
-        boneTransforms[boneIndex].SetComponents(trackingState.IsTracked ? trackingState.BoneRotations[boneIndex] : bone.Pose.Orientation, 
+
+        FQuat rotationIn = bone.Pose.Orientation;
+        if(trackingState.IsTracked)
+        {
+            rotationIn = trackingState.BoneRotations[boneIndex];
+            if(leftHand)
+            {
+                rotationIn *= LeftHandBoneRotationOffset.Quaternion();
+            }
+            else
+            {
+                rotationIn *= RightHandBoneRotationOffset.Quaternion();
+            }
+        }
+
+        boneTransforms[boneIndex].SetComponents(rotationIn, 
                                                 bone.Pose.Position, 
                                                 FVector::OneVector);
         if(bone.ParentBoneIndex != -1)
