@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--Quest Hands additions-->
+<root xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- init section is always evaluated once per architecture -->
+  <init>
+    <setBoolFromPropertyContains result="bPackageForOculusQuest" ini="Engine" section="/Script/AndroidRuntimeSettings.AndroidRuntimeSettings" property="PackageForOculusMobile" contains="Quest"/>
+    <setBoolFromProperty result="bSupportsHandsTracking" ini="Engine" section="/Script/AndroidRuntimeSettings.AndroidRuntimeSettings" property="bSupportQuestHandsTracking" default="false"/>
+  </init>
+  <!-- optional updates applied to AndroidManifest.xml -->
+  <androidManifestUpdates>
+    <if condition="bPackageForOculusQuest">
+      <true>
+        <if condition="bSupportsHandsTracking">
+          <true>
+            <!-- Oculus Hands Support -->
+            <log text="Oculus Quest Hands Tracking Permissions Added!"/>
+            <addPermission android:name="oculus.permission.handtracking"/>
+            <addFeature android:name="oculus.software.handtracking" android:required="false"/>
+          </true>
+        </if>
+      </true>
+    </if>
+  </androidManifestUpdates>
+</root>

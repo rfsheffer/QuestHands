@@ -1,0 +1,30 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "1.0",
+  "FriendlyName": "QuestHands",
+  "Description": "Oculus Quest hand tracking plugin",
+  "Category": "VR",
+  "CreatedBy": "Ryan Sheffer",
+  "CreatedByURL": "https://github.com/rfsheffer",
+  "DocsURL": "",
+  "MarketplaceURL": "",
+  "SupportURL": "",
+  "CanContainContent": true,
+  "IsBetaVersion": false,
+  "IsExperimentalVersion": false,
+  "Installed": false,
+  "Modules": [
+    {
+      "Name": "QuestHands",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "OculusVR",
+      "Enabled": true
+    }
+  ]
+}
