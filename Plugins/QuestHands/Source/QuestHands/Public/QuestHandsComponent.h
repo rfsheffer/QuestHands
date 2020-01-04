@@ -32,6 +32,12 @@ public:
     UFUNCTION(BlueprintPure, Category = "QuestHands")
     bool IsHandTrackingAvailable();
 
+    UFUNCTION(BlueprintCallable, Category = "QuestHands")
+    void SaveHandDataDump();
+
+    UFUNCTION(BlueprintCallable, Category = "QuestHands")
+    void LoadHandDataDump();
+
     // Create poseable mesh components and assign LeftHandMesh and RightHandMesh
     // If this is disabled
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "QuestHands")
@@ -68,8 +74,8 @@ public:
     bool UpdatePhysicsCapsules;
 
 	// Physics scene information for the generated capsules
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "QuestHands", meta = (SkipUCSModifiedProperties, EditCondition = "UpdatePhysicsCapsules"))
-	//FBodyInstance CapsuleBodyData;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "QuestHands", meta = (SkipUCSModifiedProperties, EditCondition = "UpdatePhysicsCapsules"))
+	FBodyInstance CapsuleBodyData;
 
     // Used to correct the rotation from the Oculus hand bone rotations to conform to your mesh
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "QuestHands")
@@ -106,16 +112,47 @@ protected:
     class UPoseableMeshComponent* rightPoseable;
 
     // Left hand bone transforms in world space
-    UPROPERTY(BlueprintReadOnly, Category = "QuestHands")
+    UPROPERTY(BlueprintReadWrite, Category = "QuestHands")
     TArray<FTransform> leftHandBones;
 
     // Right hand bone transforms in world space
-    UPROPERTY(BlueprintReadOnly, Category = "QuestHands")
+    UPROPERTY(BlueprintReadWrite, Category = "QuestHands")
     TArray<FTransform> rightHandBones;
+
+    // Capsules on the left hand
+    UPROPERTY(BlueprintReadOnly, Category = "QuestHands")
+    TArray<class UCapsuleComponent*> leftCapsules;
+
+    // Capsules on the right hand
+    UPROPERTY(BlueprintReadOnly, Category = "QuestHands")
+    TArray<class UCapsuleComponent*> rightCapsules;
 
 private:
 
     void UpdateHandTrackingData();
     void SetupBoneTransforms(const FQHandSkeleton& skeleton, const FQHandTrackingState& trackingState, TArray<FTransform>& boneTransforms, bool leftHand);
     void UpdatePoseableWithBoneTransforms(class UPoseableMeshComponent* poseable, const TArray<FTransform>& boneTransforms);
+    void UpdateCapsules(TArray<class UCapsuleComponent*>& capsules, const FQHandSkeleton& skeleton);
+};
+
+// Special class for dumping hand tracking data out to a configuration file
+UCLASS(config = Game)
+class UQuestHandsDataDump : public UObject
+{
+public:
+    GENERATED_BODY()
+
+    // The current left hand skeleton data
+    UPROPERTY(config)
+    FQHandSkeleton LeftHandSkeletonData;
+
+    // The current left hand tracking data
+    UPROPERTY(config)
+    FQHandTrackingState LeftHandTrackingData;
+
+    UPROPERTY(config)
+    FQHandSkeleton RightHandSkeletonData;
+
+    UPROPERTY(config)
+    FQHandTrackingState RightHandTrackingData;
 };

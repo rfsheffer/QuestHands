@@ -58,7 +58,7 @@ namespace QuestHands
 */
 bool UQuestHandsFunctions::IsHandTrackingEnabled()
 {
-    if(!QuestHands::IsOVRAvailable())
+    if(!QuestHands::IsOVRAvailable() || !GEngine->XRSystem.IsValid())
         return false;
 
 #if OCULUS_INPUT_SUPPORTED_PLATFORMS
@@ -127,6 +127,12 @@ bool UQuestHandsFunctions::GetTrackingState(const UObject* WorldContextObject, c
 bool UQuestHandsFunctions::GetTrackingState_Internal(const EControllerHand Hand, FQHandTrackingState& stateOut, const float worldToMeters)
 {
 #if OCULUS_INPUT_SUPPORTED_PLATFORMS
+    if(!GEngine->XRSystem.IsValid())
+    {
+        UE_LOG(LogQuestHands, Error, TEXT("Calling QuestHandsFunctions::GetTrackingState_Internal when XRSystem is not available!"));
+        return false;
+    }
+
     OculusHMD::FOculusHMD* OculusHMD = static_cast<OculusHMD::FOculusHMD*>(GEngine->XRSystem->GetHMDDevice());
     if(!OculusHMD)
     {
@@ -242,6 +248,12 @@ bool UQuestHandsFunctions::GetHandSkeleton(const UObject* WorldContextObject, co
 bool UQuestHandsFunctions::GetHandSkeleton_Internal(const EControllerHand Hand, FQHandSkeleton& skeletonOut, const float worldToMeters)
 {
 #if OCULUS_INPUT_SUPPORTED_PLATFORMS
+    if(!GEngine->XRSystem.IsValid())
+    {
+        UE_LOG(LogQuestHands, Error, TEXT("Calling QuestHandsFunctions::GetHandSkeleton_Internal when XRSystem is not available!"));
+        return false;
+    }
+
     OculusHMD::FOculusHMD* OculusHMD = static_cast<OculusHMD::FOculusHMD*>(GEngine->XRSystem->GetHMDDevice());
     if(!OculusHMD)
     {
@@ -262,6 +274,15 @@ bool UQuestHandsFunctions::GetHandSkeleton_Internal(const EControllerHand Hand, 
     {
         UE_LOG(LogQuestHands, Error, TEXT("Calling QuestHandsFunctions::GetHandSkeleton_Internal when HMD Settings is not available!"));
         return false;
+    }
+
+    if(!Settings->BaseOrientation.IsIdentity())
+    {
+        UE_LOG(LogQuestHands, Warning, TEXT("BaseOrientation not identity!"));
+    }
+    if(!Settings->BaseOffset.IsZero())
+    {
+        UE_LOG(LogQuestHands, Warning, TEXT("BaseOffset not zero!"));
     }
 
     ovrpSkeletonType hand = Hand == EControllerHand::Left ? ovrpSkeletonType_HandLeft : ovrpSkeletonType_HandRight;

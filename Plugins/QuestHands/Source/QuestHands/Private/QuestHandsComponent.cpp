@@ -2,8 +2,10 @@
 
 #include "QuestHandsComponent.h"
 #include "GameFramework/WorldSettings.h"
-#include "Components/PoseableMeshComponent.h"
 #include "UObject/ConstructorHelpers.h"
+
+#include "Components/PoseableMeshComponent.h"
+#include "Components/CapsuleComponent.h"
 
 //---------------------------------------------------------------------------------------------------------------------
 /**
@@ -15,6 +17,8 @@ UQuestHandsComponent::UQuestHandsComponent() :
     , RightHandMesh(nullptr)
     , UpdateHandScale(true)
     , UpdatePhysicsCapsules(true)
+    , LeftHandBoneRotationOffset(0.0f, 90.0f, 90.0f)
+    , RightHandBoneRotationOffset(0.0f, 90.0f, 90.0f)
     , leftPoseable(nullptr)
     , rightPoseable(nullptr)
 {
@@ -104,6 +108,44 @@ void UQuestHandsComponent::BeginPlay()
         }
     }
 
+    if(UpdateHandMeshComponents && UpdatePhysicsCapsules)
+    {
+        // Create the capsules now
+        leftCapsules.SetNum(LeftHandSkeletonData.BoneCapsules.Num());
+        for(int32 capsuleIndex = 0; capsuleIndex < leftCapsules.Num(); ++capsuleIndex)
+        {
+            UCapsuleComponent* capsuleComp = NewObject<UCapsuleComponent>(GetOwner(), UCapsuleComponent::StaticClass());
+            if(capsuleComp)
+            {
+                leftCapsules[capsuleIndex] = capsuleComp;
+                capsuleComp->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetIncludingScale);
+                capsuleComp->BodyInstance = CapsuleBodyData;
+                capsuleComp->RegisterComponent();
+            }
+            else
+            {
+                UE_LOG(LogQuestHands, Warning, TEXT("UQuestHandsComponent unable to create UCapsuleComponent!"));
+            }
+        }
+
+        rightCapsules.SetNum(RightHandSkeletonData.BoneCapsules.Num());
+        for(int32 capsuleIndex = 0; capsuleIndex < rightCapsules.Num(); ++capsuleIndex)
+        {
+            UCapsuleComponent* capsuleComp = NewObject<UCapsuleComponent>(GetOwner(), UCapsuleComponent::StaticClass());
+            if(capsuleComp)
+            {
+                rightCapsules[capsuleIndex] = capsuleComp;
+                capsuleComp->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetIncludingScale);
+                capsuleComp->BodyInstance = CapsuleBodyData;
+                capsuleComp->RegisterComponent();
+            }
+            else
+            {
+                UE_LOG(LogQuestHands, Warning, TEXT("UQuestHandsComponent unable to create UCapsuleComponent!"));
+            }
+        }
+    }
+
     Super::BeginPlay();
 }
 
@@ -126,15 +168,31 @@ void UQuestHandsComponent::TickComponent(float DeltaTime, enum ELevelTick TickTy
     {
         if(leftPoseable)
         {
+            if(UpdateHandScale)
+            {
+                leftPoseable->SetRelativeScale3D(FVector(LeftHandTrackingData.HandScale));
+            }
+
             FTransform rootPose(LeftHandTrackingData.RootPose.Orientation, LeftHandTrackingData.RootPose.Position, FVector::OneVector);
             leftPoseable->SetRelativeTransform(rootPose);
             UpdatePoseableWithBoneTransforms(leftPoseable, leftHandBones);
         }
         if(rightPoseable)
         {
+            if(UpdateHandScale)
+            {
+                rightPoseable->SetRelativeScale3D(FVector(RightHandTrackingData.HandScale));
+            }
+
             FTransform rootPose(RightHandTrackingData.RootPose.Orientation, RightHandTrackingData.RootPose.Position, FVector::OneVector);
             rightPoseable->SetRelativeTransform(rootPose);
             UpdatePoseableWithBoneTransforms(rightPoseable, rightHandBones);
+        }
+
+        if(UpdatePhysicsCapsules)
+        {
+            UpdateCapsules(leftCapsules, LeftHandSkeletonData);
+            UpdateCapsules(rightCapsules, RightHandSkeletonData);
         }
     }
 }
@@ -150,9 +208,49 @@ bool UQuestHandsComponent::IsHandTrackingAvailable()
 //---------------------------------------------------------------------------------------------------------------------
 /**
 */
+void UQuestHandsComponent::SaveHandDataDump()
+{
+    UQuestHandsDataDump *tmpTracking = GetMutableDefault<UQuestHandsDataDump>();
+    tmpTracking->LeftHandSkeletonData = LeftHandSkeletonData;
+    tmpTracking->LeftHandTrackingData = LeftHandTrackingData;
+    tmpTracking->RightHandSkeletonData = RightHandSkeletonData;
+    tmpTracking->RightHandTrackingData = RightHandTrackingData;
+    tmpTracking->SaveConfig(CPF_Config, *(FPaths::ProjectSavedDir() / TEXT("HandTrackingDump.txt")));
+    UE_LOG(LogQuestHands, Log, TEXT("Saving Hand Data Dump to %s"), *(FPaths::ProjectSavedDir() / TEXT("HandTrackingDump.txt")));
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+/**
+*/
+void UQuestHandsComponent::LoadHandDataDump()
+{
+    FString dataPath = FPaths::ProjectSavedDir() / TEXT("HandTrackingDump.txt");
+    if(FPaths::FileExists(dataPath))
+    {
+        UQuestHandsDataDump *tmpTracking = GetMutableDefault<UQuestHandsDataDump>();
+        tmpTracking->LoadConfig(NULL, *dataPath);
+
+        LeftHandSkeletonData = tmpTracking->LeftHandSkeletonData;
+        LeftHandTrackingData = tmpTracking->LeftHandTrackingData;
+        RightHandSkeletonData = tmpTracking->RightHandSkeletonData;
+        RightHandTrackingData = tmpTracking->RightHandTrackingData;
+
+        SetupBoneTransforms(LeftHandSkeletonData, LeftHandTrackingData, leftHandBones, true);
+        SetupBoneTransforms(RightHandSkeletonData, RightHandTrackingData, rightHandBones, false);
+    }
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+/**
+*/
 void UQuestHandsComponent::UpdateHandTrackingData()
 {
     checkf(GetWorld(), TEXT("UQuestHandsComponent : Invalid world!?"));
+
+    if(!UQuestHandsFunctions::IsHandTrackingEnabled())
+    {
+        return;
+    }
 
     float worldToMeters = 100.0f;
     AWorldSettings* worldSettings = GetWorld()->GetWorldSettings();
@@ -196,14 +294,6 @@ void UQuestHandsComponent::SetupBoneTransforms(const FQHandSkeleton& skeleton, c
         if(trackingState.IsTracked)
         {
             rotationIn = trackingState.BoneRotations[boneIndex];
-            if(leftHand)
-            {
-                rotationIn *= LeftHandBoneRotationOffset.Quaternion();
-            }
-            else
-            {
-                rotationIn *= RightHandBoneRotationOffset.Quaternion();
-            }
         }
 
         boneTransforms[boneIndex].SetComponents(rotationIn, 
@@ -211,7 +301,7 @@ void UQuestHandsComponent::SetupBoneTransforms(const FQHandSkeleton& skeleton, c
                                                 FVector::OneVector);
         if(bone.ParentBoneIndex != -1)
         {
-            // Apply our parents transform which converts us into world space
+            // Apply our parents transform which converts us into world space and applies the root scale, etc
             boneTransforms[boneIndex] *= boneTransforms[bone.ParentBoneIndex];
         }
         else
@@ -219,7 +309,7 @@ void UQuestHandsComponent::SetupBoneTransforms(const FQHandSkeleton& skeleton, c
             // Apply our VR root transform AND our rootPose transform
             FTransform rootTransform(trackingState.RootPose.Orientation, 
                                      trackingState.RootPose.Position, 
-                                     FVector::OneVector);
+                                     FVector(UpdateHandScale ? trackingState.HandScale : 1.0f));
             rootTransform *= GetComponentTransform();
             boneTransforms[boneIndex] *= rootTransform;
         }
@@ -236,9 +326,24 @@ void UQuestHandsComponent::UpdatePoseableWithBoneTransforms(UPoseableMeshCompone
         return;
     }
 
+    bool isLeftHand = poseable == leftPoseable;
+    FQuat rotationOffset = isLeftHand ? LeftHandBoneRotationOffset.Quaternion() : RightHandBoneRotationOffset.Quaternion();
+
     for(int32 boneIndex = 0; boneIndex < boneTransforms.Num(); ++boneIndex)
     {
-        FString boneName = UQuestHandsFunctions::GetHandBoneName((EQHandBones)boneIndex, poseable == leftPoseable);
-        poseable->SetBoneTransformByName(FName(*boneName), boneTransforms[boneIndex], EBoneSpaces::WorldSpace);
+        FString boneName = UQuestHandsFunctions::GetHandBoneName((EQHandBones)boneIndex, isLeftHand);
+
+        FTransform transSet = boneTransforms[boneIndex];
+        transSet.SetRotation(transSet.GetRotation() * rotationOffset);
+
+        poseable->SetBoneTransformByName(FName(*boneName), transSet, EBoneSpaces::WorldSpace);
     }
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+/**
+*/
+void UQuestHandsComponent::UpdateCapsules(TArray<UCapsuleComponent*>& capsules, const FQHandSkeleton& skeleton)
+{
+
 }
