@@ -76,6 +76,10 @@ struct FQHandBoneCapsule
 {
     GENERATED_BODY()
 
+    // index of the bone
+    //UPROPERTY(BlueprintReadWrite, Category = "HandBone")
+    //int32 BoneIndex;
+
     // Points at either end of the cylinder inscribed in the capsule. Also the center points for
     // spheres at either end of the capsule. Points A and B in the diagram above.
     UPROPERTY(BlueprintReadWrite, Category = "BoneCapsule")

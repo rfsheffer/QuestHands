@@ -110,40 +110,7 @@ void UQuestHandsComponent::BeginPlay()
 
     if(UpdateHandMeshComponents && UpdatePhysicsCapsules)
     {
-        // Create the capsules now
-        leftCapsules.SetNum(LeftHandSkeletonData.BoneCapsules.Num());
-        for(int32 capsuleIndex = 0; capsuleIndex < leftCapsules.Num(); ++capsuleIndex)
-        {
-            UCapsuleComponent* capsuleComp = NewObject<UCapsuleComponent>(GetOwner(), UCapsuleComponent::StaticClass());
-            if(capsuleComp)
-            {
-                leftCapsules[capsuleIndex] = capsuleComp;
-                capsuleComp->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetIncludingScale);
-                capsuleComp->BodyInstance = CapsuleBodyData;
-                capsuleComp->RegisterComponent();
-            }
-            else
-            {
-                UE_LOG(LogQuestHands, Warning, TEXT("UQuestHandsComponent unable to create UCapsuleComponent!"));
-            }
-        }
-
-        rightCapsules.SetNum(RightHandSkeletonData.BoneCapsules.Num());
-        for(int32 capsuleIndex = 0; capsuleIndex < rightCapsules.Num(); ++capsuleIndex)
-        {
-            UCapsuleComponent* capsuleComp = NewObject<UCapsuleComponent>(GetOwner(), UCapsuleComponent::StaticClass());
-            if(capsuleComp)
-            {
-                rightCapsules[capsuleIndex] = capsuleComp;
-                capsuleComp->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetIncludingScale);
-                capsuleComp->BodyInstance = CapsuleBodyData;
-                capsuleComp->RegisterComponent();
-            }
-            else
-            {
-                UE_LOG(LogQuestHands, Warning, TEXT("UQuestHandsComponent unable to create UCapsuleComponent!"));
-            }
-        }
+        SetupCapsuleComponents();
     }
 
     Super::BeginPlay();
@@ -166,34 +133,7 @@ void UQuestHandsComponent::TickComponent(float DeltaTime, enum ELevelTick TickTy
     // Do we have a poseable mesh to update? Do so!
     if(UpdateHandMeshComponents)
     {
-        if(leftPoseable)
-        {
-            if(UpdateHandScale)
-            {
-                leftPoseable->SetRelativeScale3D(FVector(LeftHandTrackingData.HandScale));
-            }
-
-            FTransform rootPose(LeftHandTrackingData.RootPose.Orientation, LeftHandTrackingData.RootPose.Position, FVector::OneVector);
-            leftPoseable->SetRelativeTransform(rootPose);
-            UpdatePoseableWithBoneTransforms(leftPoseable, leftHandBones);
-        }
-        if(rightPoseable)
-        {
-            if(UpdateHandScale)
-            {
-                rightPoseable->SetRelativeScale3D(FVector(RightHandTrackingData.HandScale));
-            }
-
-            FTransform rootPose(RightHandTrackingData.RootPose.Orientation, RightHandTrackingData.RootPose.Position, FVector::OneVector);
-            rightPoseable->SetRelativeTransform(rootPose);
-            UpdatePoseableWithBoneTransforms(rightPoseable, rightHandBones);
-        }
-
-        if(UpdatePhysicsCapsules)
-        {
-            UpdateCapsules(leftCapsules, LeftHandSkeletonData);
-            UpdateCapsules(rightCapsules, RightHandSkeletonData);
-        }
+        DoUpdateHandMeshComponents();
     }
 }
 
@@ -222,7 +162,7 @@ void UQuestHandsComponent::SaveHandDataDump()
 //---------------------------------------------------------------------------------------------------------------------
 /**
 */
-void UQuestHandsComponent::LoadHandDataDump()
+bool UQuestHandsComponent::LoadHandDataDump()
 {
     FString dataPath = FPaths::ProjectSavedDir() / TEXT("HandTrackingDump.txt");
     if(FPaths::FileExists(dataPath))
@@ -235,9 +175,15 @@ void UQuestHandsComponent::LoadHandDataDump()
         RightHandSkeletonData = tmpTracking->RightHandSkeletonData;
         RightHandTrackingData = tmpTracking->RightHandTrackingData;
 
+        SetupCapsuleComponents();
+
         SetupBoneTransforms(LeftHandSkeletonData, LeftHandTrackingData, leftHandBones, true);
         SetupBoneTransforms(RightHandSkeletonData, RightHandTrackingData, rightHandBones, false);
+
+        DoUpdateHandMeshComponents();
+        return true;
     }
+    return false;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -343,7 +289,98 @@ void UQuestHandsComponent::UpdatePoseableWithBoneTransforms(UPoseableMeshCompone
 //---------------------------------------------------------------------------------------------------------------------
 /**
 */
+void UQuestHandsComponent::DoUpdateHandMeshComponents()
+{
+    if(leftPoseable)
+    {
+        if(UpdateHandScale)
+        {
+            leftPoseable->SetRelativeScale3D(FVector(LeftHandTrackingData.HandScale));
+        }
+
+        FTransform rootPose(LeftHandTrackingData.RootPose.Orientation, LeftHandTrackingData.RootPose.Position, FVector::OneVector);
+        leftPoseable->SetRelativeTransform(rootPose);
+        UpdatePoseableWithBoneTransforms(leftPoseable, leftHandBones);
+    }
+    if(rightPoseable)
+    {
+        if(UpdateHandScale)
+        {
+            rightPoseable->SetRelativeScale3D(FVector(RightHandTrackingData.HandScale));
+        }
+
+        FTransform rootPose(RightHandTrackingData.RootPose.Orientation, RightHandTrackingData.RootPose.Position, FVector::OneVector);
+        rightPoseable->SetRelativeTransform(rootPose);
+        UpdatePoseableWithBoneTransforms(rightPoseable, rightHandBones);
+    }
+
+    if(UpdatePhysicsCapsules)
+    {
+        UpdateCapsules(leftCapsules, LeftHandSkeletonData);
+        UpdateCapsules(rightCapsules, RightHandSkeletonData);
+    }
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+/**
+*/
+void UQuestHandsComponent::SetupCapsuleComponents()
+{
+    if(leftCapsules.Num() != LeftHandSkeletonData.BoneCapsules.Num())
+    {
+        // Create the capsules now
+        leftCapsules.SetNum(LeftHandSkeletonData.BoneCapsules.Num());
+        for(int32 capsuleIndex = 0; capsuleIndex < leftCapsules.Num(); ++capsuleIndex)
+        {
+            UCapsuleComponent* capsuleComp = NewObject<UCapsuleComponent>(GetOwner(), UCapsuleComponent::StaticClass());
+            if(capsuleComp)
+            {
+                leftCapsules[capsuleIndex] = capsuleComp;
+                capsuleComp->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetIncludingScale);
+                capsuleComp->BodyInstance = CapsuleBodyData;
+                capsuleComp->RegisterComponent();
+            }
+            else
+            {
+                UE_LOG(LogQuestHands, Warning, TEXT("UQuestHandsComponent unable to create UCapsuleComponent!"));
+            }
+        }
+    }
+
+    if(rightCapsules.Num() != RightHandSkeletonData.BoneCapsules.Num())
+    {
+        rightCapsules.SetNum(RightHandSkeletonData.BoneCapsules.Num());
+        for(int32 capsuleIndex = 0; capsuleIndex < rightCapsules.Num(); ++capsuleIndex)
+        {
+            UCapsuleComponent* capsuleComp = NewObject<UCapsuleComponent>(GetOwner(), UCapsuleComponent::StaticClass());
+            if(capsuleComp)
+            {
+                rightCapsules[capsuleIndex] = capsuleComp;
+                capsuleComp->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetIncludingScale);
+                capsuleComp->BodyInstance = CapsuleBodyData;
+                capsuleComp->RegisterComponent();
+            }
+            else
+            {
+                UE_LOG(LogQuestHands, Warning, TEXT("UQuestHandsComponent unable to create UCapsuleComponent!"));
+            }
+        }
+    }
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+/**
+*/
 void UQuestHandsComponent::UpdateCapsules(TArray<UCapsuleComponent*>& capsules, const FQHandSkeleton& skeleton)
 {
+    if(skeleton.BoneCapsules.Num() != capsules.Num())
+    {
+        UE_LOG(LogQuestHands, Warning, TEXT("UQuestHandsComponent::UpdateCapsules with incorrect number of capsule components!"));
+        return;
+    }
 
+//     for(int32 capsuleIndex = 0; capsuleIndex < capsules.Num(); ++capsuleIndex)
+//     {
+//         skeleton.BoneCapsules[capsuleIndex].
+//     }
 }

@@ -32,11 +32,14 @@ public:
     UFUNCTION(BlueprintPure, Category = "QuestHands")
     bool IsHandTrackingAvailable();
 
+    // Save a dump of the hand state to a file on the device called HandTrackingDump.txt located in the Saved directory for the game.
+    // This is useful for getting a hand state data dump from device and loading that in the PC editor to figure out problems with setting up visuals for tracking.
     UFUNCTION(BlueprintCallable, Category = "QuestHands")
     void SaveHandDataDump();
 
+    // Try to locate a file called HandTrackingDump.txt in the Saved directory for the game and load that hand data and pose the hands.
     UFUNCTION(BlueprintCallable, Category = "QuestHands")
-    void LoadHandDataDump();
+    bool LoadHandDataDump();
 
     // Create poseable mesh components and assign LeftHandMesh and RightHandMesh
     // If this is disabled
@@ -132,6 +135,8 @@ private:
     void UpdateHandTrackingData();
     void SetupBoneTransforms(const FQHandSkeleton& skeleton, const FQHandTrackingState& trackingState, TArray<FTransform>& boneTransforms, bool leftHand);
     void UpdatePoseableWithBoneTransforms(class UPoseableMeshComponent* poseable, const TArray<FTransform>& boneTransforms);
+    void DoUpdateHandMeshComponents();
+    void SetupCapsuleComponents();
     void UpdateCapsules(TArray<class UCapsuleComponent*>& capsules, const FQHandSkeleton& skeleton);
 };
 
