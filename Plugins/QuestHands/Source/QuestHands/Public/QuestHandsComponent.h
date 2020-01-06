@@ -42,7 +42,8 @@ public:
     bool LoadHandDataDump();
 
     // Create poseable mesh components and assign LeftHandMesh and RightHandMesh
-    // If this is disabled
+    // If this is disabled you need to supply your own mesh components parented to this QuestHands component and set the names to look for with
+    // LeftHandMeshComponentName and RightHandMeshComponentName fields.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "QuestHands")
     bool CreateHandMeshComponents;
 
@@ -107,27 +108,35 @@ public:
 protected:
 
     // Left hand poseable mesh component
-    UPROPERTY(BlueprintReadOnly, Category = "QuestHands")
+    UPROPERTY(BlueprintReadWrite, Category = "QuestHands")
     class UPoseableMeshComponent* leftPoseable;
 
     // Right hand poseable mesh component
-    UPROPERTY(BlueprintReadOnly, Category = "QuestHands")
+    UPROPERTY(BlueprintReadWrite, Category = "QuestHands")
     class UPoseableMeshComponent* rightPoseable;
 
     // Left hand bone transforms in world space
     UPROPERTY(BlueprintReadWrite, Category = "QuestHands")
     TArray<FTransform> leftHandBones;
 
+    // Left hand bone centers in world space
+    UPROPERTY(BlueprintReadWrite, Category = "QuestHands")
+    TArray<FVector> leftHandBoneCenters;
+
     // Right hand bone transforms in world space
     UPROPERTY(BlueprintReadWrite, Category = "QuestHands")
     TArray<FTransform> rightHandBones;
 
+    // Left hand bone centers in world space
+    UPROPERTY(BlueprintReadWrite, Category = "QuestHands")
+    TArray<FVector> rightHandBoneCenters;
+
     // Capsules on the left hand
-    UPROPERTY(BlueprintReadOnly, Category = "QuestHands")
+    UPROPERTY(BlueprintReadWrite, Category = "QuestHands")
     TArray<class UCapsuleComponent*> leftCapsules;
 
     // Capsules on the right hand
-    UPROPERTY(BlueprintReadOnly, Category = "QuestHands")
+    UPROPERTY(BlueprintReadWrite, Category = "QuestHands")
     TArray<class UCapsuleComponent*> rightCapsules;
 
 private:
@@ -137,7 +146,7 @@ private:
     void UpdatePoseableWithBoneTransforms(class UPoseableMeshComponent* poseable, const TArray<FTransform>& boneTransforms);
     void DoUpdateHandMeshComponents();
     void SetupCapsuleComponents();
-    void UpdateCapsules(TArray<class UCapsuleComponent*>& capsules, const FQHandSkeleton& skeleton);
+    void UpdateCapsules(const TArray<FTransform>& bones, TArray<UCapsuleComponent*>& capsules, const FQHandSkeleton& skeleton);
 };
 
 // Special class for dumping hand tracking data out to a configuration file

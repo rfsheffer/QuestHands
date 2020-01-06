@@ -316,8 +316,8 @@ void UQuestHandsComponent::DoUpdateHandMeshComponents()
 
     if(UpdatePhysicsCapsules)
     {
-        UpdateCapsules(leftCapsules, LeftHandSkeletonData);
-        UpdateCapsules(rightCapsules, RightHandSkeletonData);
+        UpdateCapsules(leftHandBones, leftCapsules, LeftHandSkeletonData);
+        UpdateCapsules(rightHandBones, rightCapsules, RightHandSkeletonData);
     }
 }
 
@@ -371,16 +371,40 @@ void UQuestHandsComponent::SetupCapsuleComponents()
 //---------------------------------------------------------------------------------------------------------------------
 /**
 */
-void UQuestHandsComponent::UpdateCapsules(TArray<UCapsuleComponent*>& capsules, const FQHandSkeleton& skeleton)
+void UQuestHandsComponent::UpdateCapsules(const TArray<FTransform>& bones, TArray<UCapsuleComponent*>& capsules, const FQHandSkeleton& skeleton)
 {
+    float worldToMeters = 100.0f;
+    AWorldSettings* worldSettings = GetWorld()->GetWorldSettings();
+    if(worldSettings)
+    {
+        worldToMeters = worldSettings->WorldToMeters;
+    }
+
     if(skeleton.BoneCapsules.Num() != capsules.Num())
     {
         UE_LOG(LogQuestHands, Warning, TEXT("UQuestHandsComponent::UpdateCapsules with incorrect number of capsule components!"));
         return;
     }
 
-//     for(int32 capsuleIndex = 0; capsuleIndex < capsules.Num(); ++capsuleIndex)
-//     {
-//         skeleton.BoneCapsules[capsuleIndex].
-//     }
+    TSet<int32> usedindices;
+    for(int32 boneIndex = 0; boneIndex < bones.Num(); ++boneIndex)
+    {
+        int32 parentBoneIndex = skeleton.Bones[boneIndex].ParentBoneIndex;
+        if(parentBoneIndex == -1 || usedindices.Contains(parentBoneIndex) || !capsules[parentBoneIndex])
+            continue;
+
+        FVector bonePos = bones[boneIndex].GetLocation();
+        FVector parentBonePos = bones[parentBoneIndex].GetLocation();
+
+        FVector capsuleLocation = parentBonePos + (bonePos - parentBonePos) / 2.8f;
+        FQuat capsuleRotation = bones[parentBoneIndex].GetRotation() * FRotator(0.0f, 0.0f, 90.0f).Quaternion();
+
+        float halfHeight = ((skeleton.BoneCapsules[parentBoneIndex].PointB - skeleton.BoneCapsules[parentBoneIndex].PointA).Size() * worldToMeters) / 2.0f;
+        float radius = skeleton.BoneCapsules[parentBoneIndex].Radius * worldToMeters * 0.8f;
+
+        capsules[parentBoneIndex]->SetCapsuleSize(radius, halfHeight);
+        capsules[parentBoneIndex]->SetWorldLocationAndRotation(capsuleLocation, capsuleRotation);
+
+        usedindices.Add(parentBoneIndex);
+    }
 }
