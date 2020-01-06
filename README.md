@@ -20,4 +20,4 @@ By default it will create the PoseableMeshComponents for the hands and deform th
 
 For an example of a basic implementation into a pawn actor check out the example pawn blueprint under the plugins content directory called **BP_QuestHandsPawn**
 
-![Alt text](/Screenshots/quest_hands_ue4.jpg?raw=true "Oculus Quest Hand Tracking in UE4!")
+![Alt text](/Screenshots/quest_hands_ue4.gif?raw=true "Oculus Quest Hand Tracking in UE4!")
