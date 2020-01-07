@@ -19,8 +19,6 @@ UQuestHandsComponent::UQuestHandsComponent() :
     , UpdatePhysicsCapsules(true)
     , LeftHandBoneRotationOffset(0.0f, 90.0f, 90.0f)
     , RightHandBoneRotationOffset(0.0f, 90.0f, 90.0f)
-    , leftPoseable(nullptr)
-    , rightPoseable(nullptr)
 {
     PrimaryComponentTick.bCanEverTick = true;
     PrimaryComponentTick.bStartWithTickEnabled = true;
@@ -43,12 +41,13 @@ void UQuestHandsComponent::BeginPlay()
     {
         if(LeftHandMesh)
         {
-            leftPoseable = NewObject<UPoseableMeshComponent>(GetOwner(), UPoseableMeshComponent::StaticClass());
+            UPoseableMeshComponent* leftPoseable = NewObject<UPoseableMeshComponent>(GetOwner(), UPoseableMeshComponent::StaticClass());
             if(leftPoseable)
             {
                 leftPoseable->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetIncludingScale);
                 leftPoseable->SetSkeletalMesh(LeftHandMesh);
                 leftPoseable->RegisterComponent();
+                leftPoseables.Add(leftPoseable);
             }
             else
             {
@@ -62,12 +61,13 @@ void UQuestHandsComponent::BeginPlay()
 
         if(RightHandMesh)
         {
-            rightPoseable = NewObject<UPoseableMeshComponent>(GetOwner(), UPoseableMeshComponent::StaticClass());
+            UPoseableMeshComponent* rightPoseable = NewObject<UPoseableMeshComponent>(GetOwner(), UPoseableMeshComponent::StaticClass());
             if(rightPoseable)
             {
                 rightPoseable->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetIncludingScale);
                 rightPoseable->SetSkeletalMesh(RightHandMesh);
                 rightPoseable->RegisterComponent();
+                rightPoseables.Add(rightPoseable);
             }
             else
             {
@@ -90,19 +90,27 @@ void UQuestHandsComponent::BeginPlay()
 
             if(child->GetName().Contains(LeftHandMeshComponentName))
             {
-                leftPoseable = Cast<UPoseableMeshComponent>(child);
+                UPoseableMeshComponent* leftPoseable = Cast<UPoseableMeshComponent>(child);
+                if(leftPoseable)
+                {
+                    leftPoseables.Add(leftPoseable);
+                }
             }
             else if(child->GetName().Contains(RightHandMeshComponentName))
             {
-                rightPoseable = Cast<UPoseableMeshComponent>(child);
+                UPoseableMeshComponent* rightPoseable = Cast<UPoseableMeshComponent>(child);
+                if(rightPoseable)
+                {
+                    rightPoseables.Add(rightPoseable);
+                }
             }
         }
 
-        if(!leftPoseable)
+        if(leftPoseables.Num() == 0)
         {
             UE_LOG(LogQuestHands, Warning, TEXT("UQuestHandsComponent wasn't able to find left hand mesh component named: %s"), *LeftHandMeshComponentName);
         }
-        if(!rightPoseable)
+        if(rightPoseables.Num() == 0)
         {
             UE_LOG(LogQuestHands, Warning, TEXT("UQuestHandsComponent wasn't able to find right hand mesh component named: %s"), *RightHandMeshComponentName);
         }
@@ -272,7 +280,7 @@ void UQuestHandsComponent::UpdatePoseableWithBoneTransforms(UPoseableMeshCompone
         return;
     }
 
-    bool isLeftHand = poseable == leftPoseable;
+    bool isLeftHand = leftPoseables.Contains(poseable);
     FQuat rotationOffset = isLeftHand ? LeftHandBoneRotationOffset.Quaternion() : RightHandBoneRotationOffset.Quaternion();
 
     for(int32 boneIndex = 0; boneIndex < boneTransforms.Num(); ++boneIndex)
@@ -291,31 +299,48 @@ void UQuestHandsComponent::UpdatePoseableWithBoneTransforms(UPoseableMeshCompone
 */
 void UQuestHandsComponent::DoUpdateHandMeshComponents()
 {
-    if(leftPoseable)
+    if(leftPoseables.Num())
     {
-        if(UpdateHandScale)
+        for(UPoseableMeshComponent* leftPoseable : leftPoseables)
         {
-            leftPoseable->SetRelativeScale3D(FVector(LeftHandTrackingData.HandScale));
-        }
+            if(!leftPoseable)
+                continue;
 
-        FTransform rootPose(LeftHandTrackingData.RootPose.Orientation, LeftHandTrackingData.RootPose.Position, FVector::OneVector);
-        leftPoseable->SetRelativeTransform(rootPose);
-        UpdatePoseableWithBoneTransforms(leftPoseable, leftHandBones);
+            if(UpdateHandScale)
+            {
+                leftPoseable->SetRelativeScale3D(FVector(LeftHandTrackingData.HandScale));
+            }
+
+            FTransform rootPose(LeftHandTrackingData.RootPose.Orientation, LeftHandTrackingData.RootPose.Position, FVector::OneVector);
+            leftPoseable->SetRelativeTransform(rootPose);
+            UpdatePoseableWithBoneTransforms(leftPoseable, leftHandBones);
+        }
     }
-    if(rightPoseable)
+    if(rightPoseables.Num())
     {
-        if(UpdateHandScale)
+        for(UPoseableMeshComponent* rightPoseable : rightPoseables)
         {
-            rightPoseable->SetRelativeScale3D(FVector(RightHandTrackingData.HandScale));
-        }
+            if(!rightPoseable)
+                continue;
 
-        FTransform rootPose(RightHandTrackingData.RootPose.Orientation, RightHandTrackingData.RootPose.Position, FVector::OneVector);
-        rightPoseable->SetRelativeTransform(rootPose);
-        UpdatePoseableWithBoneTransforms(rightPoseable, rightHandBones);
+            if(UpdateHandScale)
+            {
+                rightPoseable->SetRelativeScale3D(FVector(RightHandTrackingData.HandScale));
+            }
+
+            FTransform rootPose(RightHandTrackingData.RootPose.Orientation, RightHandTrackingData.RootPose.Position, FVector::OneVector);
+            rightPoseable->SetRelativeTransform(rootPose);
+            UpdatePoseableWithBoneTransforms(rightPoseable, rightHandBones);
+        }
     }
 
     if(UpdatePhysicsCapsules)
     {
+        if(leftCapsules.Num() == 0 && LeftHandSkeletonData.BoneCapsules.Num() != 0 &&
+           rightCapsules.Num() == 0 && RightHandSkeletonData.BoneCapsules.Num() != 0)
+        {
+            SetupCapsuleComponents();
+        }
         UpdateCapsules(leftHandBones, leftCapsules, LeftHandSkeletonData);
         UpdateCapsules(rightHandBones, rightCapsules, RightHandSkeletonData);
     }
@@ -328,7 +353,6 @@ void UQuestHandsComponent::SetupCapsuleComponents()
 {
     if(leftCapsules.Num() != LeftHandSkeletonData.BoneCapsules.Num())
     {
-        // Create the capsules now
         leftCapsules.SetNum(LeftHandSkeletonData.BoneCapsules.Num());
         for(int32 capsuleIndex = 0; capsuleIndex < leftCapsules.Num(); ++capsuleIndex)
         {
@@ -338,6 +362,7 @@ void UQuestHandsComponent::SetupCapsuleComponents()
                 leftCapsules[capsuleIndex] = capsuleComp;
                 capsuleComp->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetIncludingScale);
                 capsuleComp->BodyInstance = CapsuleBodyData;
+                capsuleComp->ShapeColor = FColor::Blue;
                 capsuleComp->RegisterComponent();
             }
             else
@@ -358,6 +383,7 @@ void UQuestHandsComponent::SetupCapsuleComponents()
                 rightCapsules[capsuleIndex] = capsuleComp;
                 capsuleComp->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetIncludingScale);
                 capsuleComp->BodyInstance = CapsuleBodyData;
+                capsuleComp->ShapeColor = FColor::Blue;
                 capsuleComp->RegisterComponent();
             }
             else
@@ -382,7 +408,8 @@ void UQuestHandsComponent::UpdateCapsules(const TArray<FTransform>& bones, TArra
 
     if(skeleton.BoneCapsules.Num() != capsules.Num())
     {
-        UE_LOG(LogQuestHands, Warning, TEXT("UQuestHandsComponent::UpdateCapsules with incorrect number of capsule components!"));
+        UE_LOG(LogQuestHands, Warning, TEXT("UQuestHandsComponent::UpdateCapsules with incorrect number of capsule components! Wanted %d, got %d!"), 
+               skeleton.BoneCapsules.Num(), capsules.Num());
         return;
     }
 

@@ -107,13 +107,13 @@ public:
 
 protected:
 
-    // Left hand poseable mesh component
+    // Left hand poseable mesh components (Usually just 1 but can contain multiple meshes for outline meshes)
     UPROPERTY(BlueprintReadWrite, Category = "QuestHands")
-    class UPoseableMeshComponent* leftPoseable;
+    TArray<class UPoseableMeshComponent*> leftPoseables;
 
-    // Right hand poseable mesh component
+    // Right hand poseable mesh components (Usually just 1 but can contain multiple meshes for outline meshes)
     UPROPERTY(BlueprintReadWrite, Category = "QuestHands")
-    class UPoseableMeshComponent* rightPoseable;
+    TArray<class UPoseableMeshComponent*> rightPoseables;
 
     // Left hand bone transforms in world space
     UPROPERTY(BlueprintReadWrite, Category = "QuestHands")
