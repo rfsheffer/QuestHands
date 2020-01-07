@@ -77,8 +77,8 @@ struct FQHandBoneCapsule
     GENERATED_BODY()
 
     // index of the bone
-    //UPROPERTY(BlueprintReadWrite, Category = "HandBone")
-    //int32 BoneIndex;
+    UPROPERTY(BlueprintReadWrite, Category = "HandBone")
+    int32 BoneIndex;
 
     // Points at either end of the cylinder inscribed in the capsule. Also the center points for
     // spheres at either end of the capsule. Points A and B in the diagram above.
@@ -219,12 +219,6 @@ public:
 
     // Internal version for native, not blueprint accessible!
     static bool GetHandSkeleton_Internal(const EControllerHand Hand, FQHandSkeleton& skeletonOut, const float worldToMeters);
-
-    /*UFUNCTION(BlueprintPure, Category = "QuestHands", meta = (WorldContext = "WorldContextObject"))
-    static FVector OVecToScene(const UObject* WorldContextObject, const FVector& vecIn);
-
-    UFUNCTION(BlueprintPure, Category = "QuestHands", meta = (WorldContext = "WorldContextObject"))
-    static FQuat OQuatToScene(const UObject* WorldContextObject, const FQuat& quatIn);*/
 
     /** From the bone enum value return the standard bone name that would have been assigned to the Oculus example hand skeletal mesh */
     UFUNCTION(BlueprintPure, Category = "QuestHands", meta = (WorldContext = "WorldContextObject"))
