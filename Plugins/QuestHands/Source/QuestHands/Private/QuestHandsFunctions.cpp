@@ -310,6 +310,7 @@ bool UQuestHandsFunctions::GetHandSkeleton_Internal(const EControllerHand Hand, 
         skeletonOut.BoneCapsules.AddDefaulted(skeleton.NumBoneCapsules - skeletonOut.BoneCapsules.Num());
         for(int32 capsuleIndex = 0; capsuleIndex < (int32)skeleton.NumBoneCapsules; ++capsuleIndex)
         {
+            skeletonOut.BoneCapsules[capsuleIndex].BoneIndex = skeleton.BoneCapsules[capsuleIndex].BoneIndex;
             skeletonOut.BoneCapsules[capsuleIndex].PointA = OculusHMD::ToFVector(skeleton.BoneCapsules[capsuleIndex].Points[0]);
             skeletonOut.BoneCapsules[capsuleIndex].PointB = OculusHMD::ToFVector(skeleton.BoneCapsules[capsuleIndex].Points[1]);
             skeletonOut.BoneCapsules[capsuleIndex].Radius = skeleton.BoneCapsules[capsuleIndex].Radius;
