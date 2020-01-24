@@ -21,6 +21,18 @@ There is an example pawn setup with a number of features consistent with those f
 It also contains an example of using your own PoseableMeshComponent. The pawn can be found in the plugins content directory and is called BP_QuestHandsPawn
 
 ## Usage
+Your projects Engine ini should contain a section called [/Script/AndroidRuntimeSettings.AndroidRuntimeSettings] with at least two additions. Here is an example:
+
+```
+[/Script/AndroidRuntimeSettings.AndroidRuntimeSettings]
++PackageForOculusMobile=Quest
+bSupportQuestHandsTracking=True
+```
+
+Note **bSupportQuestHandsTracking** bool. If the QuestHands plugin is enabled this is true by default. Setting it to false disabled the important android manifest options which lets the app have hands tracking.
+
+If you want a configuration which works well for the Quest you can use this projects configuration as a starting point.
+
 The plugin contains a function library for querying the Oculus hand tracking API directly OR you can use the supplied QuestHands component to do all the work.
 
 The component is called **QuestHandsComponent** and just has to be assigned to your pawn to function. 
@@ -32,3 +44,6 @@ For an example of a basic implementation into a pawn actor check out the example
 To implement the plugin into your own project copy the folder QuestHands from this repos Plugins directory to your own project and activate the plugin.
 
 ![Alt text](/Screenshots/quest_hands_ue4.gif?raw=true "Oculus Quest Hand Tracking in UE4!")
+
+## License
+[MIT](https://choosealicense.com/licenses/mit/)

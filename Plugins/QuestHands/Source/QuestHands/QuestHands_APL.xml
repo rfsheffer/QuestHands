@@ -4,7 +4,7 @@
   <!-- init section is always evaluated once per architecture -->
   <init>
     <setBoolFromPropertyContains result="bPackageForOculusQuest" ini="Engine" section="/Script/AndroidRuntimeSettings.AndroidRuntimeSettings" property="PackageForOculusMobile" contains="Quest"/>
-    <setBoolFromProperty result="bSupportsHandsTracking" ini="Engine" section="/Script/AndroidRuntimeSettings.AndroidRuntimeSettings" property="bSupportQuestHandsTracking" default="false"/>
+    <setBoolFromProperty result="bSupportsHandsTracking" ini="Engine" section="/Script/AndroidRuntimeSettings.AndroidRuntimeSettings" property="bSupportQuestHandsTracking" default="true"/>
   </init>
   <!-- optional updates applied to AndroidManifest.xml -->
   <androidManifestUpdates>
