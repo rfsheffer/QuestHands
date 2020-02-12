@@ -45,5 +45,9 @@ To implement the plugin into your own project copy the folder QuestHands from th
 
 ![Alt text](/Screenshots/quest_hands_ue4.gif?raw=true "Oculus Quest Hand Tracking in UE4!")
 
+## Future Enhancements
+- Integrate the tracking hand bone positions as a blueprint animation graph node so it can be part of the animation composition. This will open the door to add extra additive enhancements such as finger IK which so far in the Unity projects has looked very promising.
+- With the enhancement above, an example of per finger IK.
+
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
