@@ -12,6 +12,8 @@
 
 #include "QuestHandsComponent.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnQHandsPreApplyTransformsDelegate, float, DeltaTime);
+
 /**
 * Tick function that does post physics work on skeletal mesh component. This executes in EndPhysics (after physics is done)
 **/
@@ -139,6 +141,15 @@ public:
     UPROPERTY(BlueprintReadWrite, Category = "QuestHands")
     FQHandTrackingState RightHandTrackingData;
 
+    // An event called just before the latest rendering hand state is applied to the poseable meshes.
+    // This gives you an opportunity to update the leftHandBones or rightHandBones transforms before they are applied.
+    UPROPERTY(BlueprintAssignable, SkipSerialization)
+    FOnQHandsPreApplyTransformsDelegate OnPreHandMeshesUpdate;
+
+    // An event called just before the latest physics hand state is applied to the capsule components.
+    // This gives you an opportunity to update the leftHandBones or rightHandBones transforms before they are applied.
+    UPROPERTY(BlueprintAssignable, SkipSerialization)
+    FOnQHandsPreApplyTransformsDelegate OnPreCapsulesUpdate;
 protected:
 
     // Left hand poseable mesh components (Usually just 1 but can contain multiple meshes for outline meshes)
@@ -177,7 +188,7 @@ private:
 
     friend struct FQuestHandsPhysicsTickFunction;
     FQuestHandsPhysicsTickFunction QuestHandsPhysicsTick;
-    void PhysicsTickComponent(FQuestHandsPhysicsTickFunction& tickFunc);
+    void PhysicsTickComponent(FQuestHandsPhysicsTickFunction& tickFunc, float DeltaTime);
 
     void UpdateHandTrackingData(const EQHandUpdateStep Step);
     void SetupBoneTransforms(const FQHandSkeleton& skeleton, const FQHandTrackingState& trackingState, TArray<FTransform>& boneTransforms, bool leftHand);

@@ -17,9 +17,9 @@ DECLARE_CYCLE_STAT(TEXT("PhysicsTick"), STAT_QuestHands_PhysicsTick, STATGROUP_Q
 void FQuestHandsPhysicsTickFunction::ExecuteTick(float DeltaTime, enum ELevelTick TickType, ENamedThreads::Type CurrentThread, 
                                                  const FGraphEventRef& MyCompletionGraphEvent)
 {
-    FActorComponentTickFunction::ExecuteTickHelper(Target, /*bTickInEditor=*/ false, DeltaTime, TickType, [this](float DilatedTime)
+    FActorComponentTickFunction::ExecuteTickHelper(Target, /*bTickInEditor=*/ false, DeltaTime, TickType, [this, DeltaTime](float DilatedTime)
     {
-        Target->PhysicsTickComponent(*this);
+        Target->PhysicsTickComponent(*this, DeltaTime);
     });
 }
 
@@ -205,6 +205,11 @@ void UQuestHandsComponent::TickComponent(float DeltaTime, enum ELevelTick TickTy
 
     UpdateHandTrackingData(EQHandUpdateStep::UpdateStep_Render);
 
+    if(OnPreHandMeshesUpdate.IsBound())
+    {
+        OnPreHandMeshesUpdate.Broadcast(DeltaTime);
+    }
+
     // Do we have a poseable mesh to update? Do so!
     if(UpdateHandMeshComponents)
     {
@@ -215,7 +220,7 @@ void UQuestHandsComponent::TickComponent(float DeltaTime, enum ELevelTick TickTy
 //---------------------------------------------------------------------------------------------------------------------
 /**
 */
-void UQuestHandsComponent::PhysicsTickComponent(FQuestHandsPhysicsTickFunction& tickFunc)
+void UQuestHandsComponent::PhysicsTickComponent(FQuestHandsPhysicsTickFunction& tickFunc, float DeltaTime)
 {
     SCOPE_CYCLE_COUNTER(STAT_QuestHands_PhysicsTick);
 
@@ -225,6 +230,11 @@ void UQuestHandsComponent::PhysicsTickComponent(FQuestHandsPhysicsTickFunction& 
     }
 
     UpdateHandTrackingData(EQHandUpdateStep::UpdateStep_Physics);
+
+    if(OnPreCapsulesUpdate.IsBound())
+    {
+        OnPreCapsulesUpdate.Broadcast(DeltaTime);
+    }
 
     // Do we have a poseable mesh to update? Do so!
     if(UpdateHandMeshComponents)
