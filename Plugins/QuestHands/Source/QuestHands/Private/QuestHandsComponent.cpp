@@ -7,6 +7,38 @@
 #include "Components/PoseableMeshComponent.h"
 #include "Components/CapsuleComponent.h"
 
+DECLARE_STATS_GROUP(TEXT("Quest Hands"), STATGROUP_QuestHands, STATCAT_Advanced);
+DECLARE_CYCLE_STAT(TEXT("RenderTick"), STAT_QuestHands_RenderTick, STATGROUP_QuestHands);
+DECLARE_CYCLE_STAT(TEXT("PhysicsTick"), STAT_QuestHands_PhysicsTick, STATGROUP_QuestHands);
+
+//---------------------------------------------------------------------------------------------------------------------
+/**
+*/
+void FQuestHandsPhysicsTickFunction::ExecuteTick(float DeltaTime, enum ELevelTick TickType, ENamedThreads::Type CurrentThread, 
+                                                 const FGraphEventRef& MyCompletionGraphEvent)
+{
+    FActorComponentTickFunction::ExecuteTickHelper(Target, /*bTickInEditor=*/ false, DeltaTime, TickType, [this](float DilatedTime)
+    {
+        Target->PhysicsTickComponent(*this);
+    });
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+/**
+*/
+FString FQuestHandsPhysicsTickFunction::DiagnosticMessage()
+{
+    return TEXT("FQuestHandsPhysicsTickFunction");
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+/**
+*/
+FName FQuestHandsPhysicsTickFunction::DiagnosticContext(bool bDetailed)
+{
+    return FName(TEXT("FQuestHandsPhysicsTick"));
+}
+
 //---------------------------------------------------------------------------------------------------------------------
 /**
 */
@@ -22,6 +54,16 @@ UQuestHandsComponent::UQuestHandsComponent() :
 {
     PrimaryComponentTick.bCanEverTick = true;
     PrimaryComponentTick.bStartWithTickEnabled = true;
+    PrimaryComponentTick.bTickEvenWhenPaused = true;
+    PrimaryComponentTick.bHighPriority = 1;
+    PrimaryComponentTick.TickInterval = 0;
+
+    QuestHandsPhysicsTick.TickGroup = TG_PrePhysics;
+    QuestHandsPhysicsTick.bCanEverTick = true;
+    QuestHandsPhysicsTick.bStartWithTickEnabled = true;
+    QuestHandsPhysicsTick.bTickEvenWhenPaused = true;
+    QuestHandsPhysicsTick.bHighPriority = 1;
+    QuestHandsPhysicsTick.TickInterval = 0;
 
     FString defaultLeftHandPath = TEXT("/QuestHands/Meshes/hand_left");
     LeftHandMesh = ConstructorHelpersInternal::FindOrLoadObject<USkeletalMesh>(defaultLeftHandPath);
@@ -35,7 +77,8 @@ UQuestHandsComponent::UQuestHandsComponent() :
 */
 void UQuestHandsComponent::BeginPlay()
 {
-    UpdateHandTrackingData();
+    UpdateHandTrackingData(EQHandUpdateStep::UpdateStep_Render);
+    UpdateHandTrackingData(EQHandUpdateStep::UpdateStep_Physics);
 
     if(CreateHandMeshComponents)
     {
@@ -121,7 +164,29 @@ void UQuestHandsComponent::BeginPlay()
         SetupCapsuleComponents();
     }
 
+    // Register the Hands Physics Tick Function
+    if(!QuestHandsPhysicsTick.IsTickFunctionRegistered())
+    {
+        if(SetupActorComponentTickFunction(&QuestHandsPhysicsTick))
+        {
+            QuestHandsPhysicsTick.Target = this;
+        }
+    }
+
     Super::BeginPlay();
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+/**
+*/
+void UQuestHandsComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    if(QuestHandsPhysicsTick.IsTickFunctionRegistered())
+    {
+        QuestHandsPhysicsTick.UnRegisterTickFunction();
+    }
+
+    Super::EndPlay(EndPlayReason);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -131,17 +196,40 @@ void UQuestHandsComponent::TickComponent(float DeltaTime, enum ELevelTick TickTy
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+    SCOPE_CYCLE_COUNTER(STAT_QuestHands_RenderTick);
+
     if(!UQuestHandsFunctions::IsHandTrackingEnabled())
     {
         return;
     }
 
-    UpdateHandTrackingData();
+    UpdateHandTrackingData(EQHandUpdateStep::UpdateStep_Render);
 
     // Do we have a poseable mesh to update? Do so!
     if(UpdateHandMeshComponents)
     {
-        DoUpdateHandMeshComponents();
+        DoUpdateHandMeshComponents(true, false);
+    }
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+/**
+*/
+void UQuestHandsComponent::PhysicsTickComponent(FQuestHandsPhysicsTickFunction& tickFunc)
+{
+    SCOPE_CYCLE_COUNTER(STAT_QuestHands_PhysicsTick);
+
+    if(!UQuestHandsFunctions::IsHandTrackingEnabled())
+    {
+        return;
+    }
+
+    UpdateHandTrackingData(EQHandUpdateStep::UpdateStep_Physics);
+
+    // Do we have a poseable mesh to update? Do so!
+    if(UpdateHandMeshComponents)
+    {
+        DoUpdateHandMeshComponents(false, true);
     }
 }
 
@@ -188,7 +276,7 @@ bool UQuestHandsComponent::LoadHandDataDump()
         SetupBoneTransforms(LeftHandSkeletonData, LeftHandTrackingData, leftHandBones, true);
         SetupBoneTransforms(RightHandSkeletonData, RightHandTrackingData, rightHandBones, false);
 
-        DoUpdateHandMeshComponents();
+        DoUpdateHandMeshComponents(true, true);
         return true;
     }
     return false;
@@ -197,7 +285,7 @@ bool UQuestHandsComponent::LoadHandDataDump()
 //---------------------------------------------------------------------------------------------------------------------
 /**
 */
-void UQuestHandsComponent::UpdateHandTrackingData()
+void UQuestHandsComponent::UpdateHandTrackingData(const EQHandUpdateStep Step)
 {
     checkf(GetWorld(), TEXT("UQuestHandsComponent : Invalid world!?"));
 
@@ -216,8 +304,8 @@ void UQuestHandsComponent::UpdateHandTrackingData()
     // Get the latest hand skeleton and tracking data
     UQuestHandsFunctions::GetHandSkeleton_Internal(EControllerHand::Left, LeftHandSkeletonData, worldToMeters);
     UQuestHandsFunctions::GetHandSkeleton_Internal(EControllerHand::Right, RightHandSkeletonData, worldToMeters);
-    UQuestHandsFunctions::GetTrackingState_Internal(EControllerHand::Left, LeftHandTrackingData, worldToMeters);
-    UQuestHandsFunctions::GetTrackingState_Internal(EControllerHand::Right, RightHandTrackingData, worldToMeters);
+    UQuestHandsFunctions::GetTrackingState_Internal(EControllerHand::Left, Step, LeftHandTrackingData, worldToMeters);
+    UQuestHandsFunctions::GetTrackingState_Internal(EControllerHand::Right, Step, RightHandTrackingData, worldToMeters);
 
     // Update our cached skeleton bone transforms
     SetupBoneTransforms(LeftHandSkeletonData, LeftHandTrackingData, leftHandBones, true);
@@ -297,52 +385,58 @@ void UQuestHandsComponent::UpdatePoseableWithBoneTransforms(UPoseableMeshCompone
 //---------------------------------------------------------------------------------------------------------------------
 /**
 */
-void UQuestHandsComponent::DoUpdateHandMeshComponents()
+void UQuestHandsComponent::DoUpdateHandMeshComponents(bool visualComponents, bool physicsComponents)
 {
-    if(leftPoseables.Num())
+    if(visualComponents)
     {
-        for(UPoseableMeshComponent* leftPoseable : leftPoseables)
+        if(leftPoseables.Num())
         {
-            if(!leftPoseable)
-                continue;
-
-            if(UpdateHandScale)
+            for(UPoseableMeshComponent* leftPoseable : leftPoseables)
             {
-                leftPoseable->SetRelativeScale3D(FVector(LeftHandTrackingData.HandScale));
-            }
+                if(!leftPoseable)
+                    continue;
 
-            FTransform rootPose(LeftHandTrackingData.RootPose.Orientation, LeftHandTrackingData.RootPose.Position, FVector::OneVector);
-            leftPoseable->SetRelativeTransform(rootPose);
-            UpdatePoseableWithBoneTransforms(leftPoseable, leftHandBones);
+                if(UpdateHandScale)
+                {
+                    leftPoseable->SetRelativeScale3D(FVector(LeftHandTrackingData.HandScale));
+                }
+
+                FTransform rootPose(LeftHandTrackingData.RootPose.Orientation, LeftHandTrackingData.RootPose.Position, FVector::OneVector);
+                leftPoseable->SetRelativeTransform(rootPose);
+                UpdatePoseableWithBoneTransforms(leftPoseable, leftHandBones);
+            }
+        }
+        if(rightPoseables.Num())
+        {
+            for(UPoseableMeshComponent* rightPoseable : rightPoseables)
+            {
+                if(!rightPoseable)
+                    continue;
+
+                if(UpdateHandScale)
+                {
+                    rightPoseable->SetRelativeScale3D(FVector(RightHandTrackingData.HandScale));
+                }
+
+                FTransform rootPose(RightHandTrackingData.RootPose.Orientation, RightHandTrackingData.RootPose.Position, FVector::OneVector);
+                rightPoseable->SetRelativeTransform(rootPose);
+                UpdatePoseableWithBoneTransforms(rightPoseable, rightHandBones);
+            }
         }
     }
-    if(rightPoseables.Num())
-    {
-        for(UPoseableMeshComponent* rightPoseable : rightPoseables)
-        {
-            if(!rightPoseable)
-                continue;
 
-            if(UpdateHandScale)
+    if(physicsComponents)
+    {
+        if(UpdatePhysicsCapsules)
+        {
+            if(leftCapsules.Num() == 0 && LeftHandSkeletonData.BoneCapsules.Num() != 0 &&
+               rightCapsules.Num() == 0 && RightHandSkeletonData.BoneCapsules.Num() != 0)
             {
-                rightPoseable->SetRelativeScale3D(FVector(RightHandTrackingData.HandScale));
+                SetupCapsuleComponents();
             }
-
-            FTransform rootPose(RightHandTrackingData.RootPose.Orientation, RightHandTrackingData.RootPose.Position, FVector::OneVector);
-            rightPoseable->SetRelativeTransform(rootPose);
-            UpdatePoseableWithBoneTransforms(rightPoseable, rightHandBones);
+            UpdateCapsules(leftHandBones, leftCapsules, LeftHandSkeletonData);
+            UpdateCapsules(rightHandBones, rightCapsules, RightHandSkeletonData);
         }
-    }
-
-    if(UpdatePhysicsCapsules)
-    {
-        if(leftCapsules.Num() == 0 && LeftHandSkeletonData.BoneCapsules.Num() != 0 &&
-           rightCapsules.Num() == 0 && RightHandSkeletonData.BoneCapsules.Num() != 0)
-        {
-            SetupCapsuleComponents();
-        }
-        UpdateCapsules(leftHandBones, leftCapsules, LeftHandSkeletonData);
-        UpdateCapsules(rightHandBones, rightCapsules, RightHandSkeletonData);
     }
 }
 

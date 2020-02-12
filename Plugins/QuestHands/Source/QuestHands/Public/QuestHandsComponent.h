@@ -12,6 +12,39 @@
 
 #include "QuestHandsComponent.generated.h"
 
+/**
+* Tick function that does post physics work on skeletal mesh component. This executes in EndPhysics (after physics is done)
+**/
+USTRUCT()
+struct FQuestHandsPhysicsTickFunction : public FTickFunction
+{
+	GENERATED_USTRUCT_BODY()
+
+	 UQuestHandsComponent*	Target;
+
+	/**
+	* Abstract function to execute the tick.
+	* @param DeltaTime - frame time to advance, in seconds.
+	* @param TickType - kind of tick for this frame.
+	* @param CurrentThread - thread we are executing on, useful to pass along as new tasks are created.
+	* @param MyCompletionGraphEvent - completion event for this task. Useful for holding the completetion of this task until certain child tasks are complete.
+	*/
+	virtual void ExecuteTick(float DeltaTime, enum ELevelTick TickType, ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent) override;
+	/** Abstract function to describe this tick. Used to print messages about illegal cycles in the dependency graph. */
+	virtual FString DiagnosticMessage() override;
+	/** Function used to describe this tick for active tick reporting. **/
+	virtual FName DiagnosticContext(bool bDetailed) override;
+};
+
+template<>
+struct TStructOpsTypeTraits<FQuestHandsPhysicsTickFunction> : public TStructOpsTypeTraitsBase2<FQuestHandsPhysicsTickFunction>
+{
+	enum
+	{
+		WithCopy = false
+	};
+};
+
 //---------------------------------------------------------------------------------------------------------------------
 /**
   * A component which keeps a record of the Oculus Quest hand shape which can be queried via the supplied functions.
@@ -25,6 +58,7 @@ public:
     UQuestHandsComponent();
 
     virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
     virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
 
@@ -141,10 +175,14 @@ protected:
 
 private:
 
-    void UpdateHandTrackingData();
+    friend struct FQuestHandsPhysicsTickFunction;
+    FQuestHandsPhysicsTickFunction QuestHandsPhysicsTick;
+    void PhysicsTickComponent(FQuestHandsPhysicsTickFunction& tickFunc);
+
+    void UpdateHandTrackingData(const EQHandUpdateStep Step);
     void SetupBoneTransforms(const FQHandSkeleton& skeleton, const FQHandTrackingState& trackingState, TArray<FTransform>& boneTransforms, bool leftHand);
     void UpdatePoseableWithBoneTransforms(class UPoseableMeshComponent* poseable, const TArray<FTransform>& boneTransforms);
-    void DoUpdateHandMeshComponents();
+    void DoUpdateHandMeshComponents(bool visualComponents, bool physicsComponents);
     void SetupCapsuleComponents();
     void UpdateCapsules(const TArray<FTransform>& bones, TArray<UCapsuleComponent*>& capsules, const FQHandSkeleton& skeleton);
 };

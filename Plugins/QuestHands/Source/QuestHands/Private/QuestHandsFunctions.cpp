@@ -93,7 +93,7 @@ namespace QuestHands
 //---------------------------------------------------------------------------------------------------------------------
 /**
 */
-bool UQuestHandsFunctions::GetTrackingState(const UObject* WorldContextObject, const EControllerHand Hand, FQHandTrackingState& stateOut)
+bool UQuestHandsFunctions::GetTrackingState(const UObject* WorldContextObject, const EControllerHand Hand, const EQHandUpdateStep Step, FQHandTrackingState& stateOut)
 {
     if(!QuestHands::IsOVRAvailable())
     {
@@ -115,7 +115,7 @@ bool UQuestHandsFunctions::GetTrackingState(const UObject* WorldContextObject, c
     {
         worldToMeters = worldSettings->WorldToMeters;
     }
-    return GetTrackingState_Internal(Hand, stateOut, worldToMeters);
+    return GetTrackingState_Internal(Hand, Step, stateOut, worldToMeters);
 #else
     return false;
 #endif
@@ -124,7 +124,7 @@ bool UQuestHandsFunctions::GetTrackingState(const UObject* WorldContextObject, c
 //---------------------------------------------------------------------------------------------------------------------
 /**
 */
-bool UQuestHandsFunctions::GetTrackingState_Internal(const EControllerHand Hand, FQHandTrackingState& stateOut, const float worldToMeters)
+bool UQuestHandsFunctions::GetTrackingState_Internal(const EControllerHand Hand, const EQHandUpdateStep Step, FQHandTrackingState& stateOut, const float worldToMeters)
 {
 #if OCULUS_INPUT_SUPPORTED_PLATFORMS
     if(!GEngine->XRSystem.IsValid())
@@ -140,12 +140,12 @@ bool UQuestHandsFunctions::GetTrackingState_Internal(const EControllerHand Hand,
         return false;
     }
 
-    OculusHMD::FSettings* Settings;
+    OculusHMD::FSettings* Settings = nullptr;
     if(IsInGameThread())
     {
         Settings = OculusHMD->GetSettings();
     }
-    else
+    else if(IsInRenderingThread())
     {
         Settings = OculusHMD->GetSettings_RenderThread();
     }
@@ -156,8 +156,9 @@ bool UQuestHandsFunctions::GetTrackingState_Internal(const EControllerHand Hand,
     }
 
     ovrpHand hand = Hand == EControllerHand::Left ? ovrpHand_Left : ovrpHand_Right;
+    ovrpStep step = Step == EQHandUpdateStep::UpdateStep_Render ? ovrpStep_Render : ovrpStep_Physics;
     ovrpHandState handState;
-    if(OVRP_SUCCESS(ovrp_GetHandState(ovrpStep_Render, hand, &handState)))
+    if(OVRP_SUCCESS(ovrp_GetHandState(step, hand, &handState)))
     {
         // Status Out
         stateOut.IsTracked = (handState.Status & ovrpHandStatus_HandTracked) != 0;
@@ -261,12 +262,12 @@ bool UQuestHandsFunctions::GetHandSkeleton_Internal(const EControllerHand Hand, 
         return false;
     }
 
-    OculusHMD::FSettings* Settings;
+    OculusHMD::FSettings* Settings = nullptr;
     if(IsInGameThread())
     {
         Settings = OculusHMD->GetSettings();
     }
-    else
+    else if(IsInRenderingThread())
     {
         Settings = OculusHMD->GetSettings_RenderThread();
     }

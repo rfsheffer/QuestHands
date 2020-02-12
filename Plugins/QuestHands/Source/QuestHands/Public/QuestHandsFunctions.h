@@ -186,6 +186,16 @@ struct FQHandSkeleton
     TArray<FQHandBoneCapsule> BoneCapsules;
 };
 
+UENUM(BlueprintType, DisplayName = "Hand Update Step")
+enum class EQHandUpdateStep : uint8
+{
+    // Updated from game thread at end of frame, to hand-off state to Render thread.
+    UpdateStep_Render,
+
+    // Updated from physics thread, once per simulation step.
+    UpdateStep_Physics
+};
+
 //---------------------------------------------------------------------------------------------------------------------
 /**
   * Blueprint Functions for querying the Oculus Hands Interface
@@ -205,10 +215,10 @@ public:
      * Use this to update rendering, gestures, etc...
     */
     UFUNCTION(BlueprintCallable, Category = "QuestHands", meta = (WorldContext = "WorldContextObject"))
-    static bool GetTrackingState(const UObject* WorldContextObject, const EControllerHand Hand, FQHandTrackingState& stateOut);
+    static bool GetTrackingState(const UObject* WorldContextObject, const EControllerHand Hand, const EQHandUpdateStep Step, FQHandTrackingState& stateOut);
 
     // Internal version for native, not blueprint accessible!
-    static bool GetTrackingState_Internal(const EControllerHand Hand, FQHandTrackingState& stateOut, const float worldToMeters);
+    static bool GetTrackingState_Internal(const EControllerHand Hand, const EQHandUpdateStep Step, FQHandTrackingState& stateOut, const float worldToMeters);
 
     /**
      * Get the hand skeleton in its reference pose.
