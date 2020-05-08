@@ -1,9 +1,11 @@
 # QuestHands
 An Unreal Engine 4 plugin for the new Oculus Quest hands tracking. To tied us over till Oculus's official release.
 
-This plugin requires version 12 of the Oculus Plugin so you need to use the Oculus branch of the Unreal Engine for this plugin to work.
+This plugin version requires version 12 of the Oculus Plugin so you need to use the Oculus branch of the Unreal Engine for this plugin to work.
 
 The Oculus branch can be found here: https://github.com/Oculus-VR/UnrealEngine/tree/oculus-4.24.1-release-1.44.0-v12.0
+
+For other versions of the plugin see the branches of this repository.
 
 ## Implementation Details
 - Full hand tracking from API
@@ -29,7 +31,7 @@ Your projects Engine ini should contain a section called [/Script/AndroidRuntime
 bSupportQuestHandsTracking=True
 ```
 
-Note **bSupportQuestHandsTracking** bool. If the QuestHands plugin is enabled this is true by default. Setting it to false disabled the important android manifest options which lets the app have hands tracking.
+Note **bSupportQuestHandsTracking** bool. If the QuestHands plugin is enabled this is true by default. Setting it to false will disable the important android manifest options which lets the app have hands tracking.
 
 If you want a configuration which works well for the Quest you can use this projects configuration as a starting point.
 
@@ -47,7 +49,6 @@ To implement the plugin into your own project copy the folder QuestHands from th
 
 ## Future Enhancements
 - Integrate the tracking hand bone positions as a blueprint animation graph node so it can be part of the animation composition. This will open the door to add extra additive enhancements such as finger IK which so far in the Unity projects has looked very promising.
-- With the enhancement above, an example of per finger IK.
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
