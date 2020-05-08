@@ -66,10 +66,18 @@ UQuestHandsComponent::UQuestHandsComponent() :
     QuestHandsPhysicsTick.TickInterval = 0;
 
     FString defaultLeftHandPath = TEXT("/QuestHands/Meshes/hand_left");
+#if ENGINE_MINOR_VERSION >= 25
+    LeftHandMesh = ConstructorHelpersInternal::FindOrLoadObject<USkeletalMesh>(defaultLeftHandPath, LOAD_None);
+#else
     LeftHandMesh = ConstructorHelpersInternal::FindOrLoadObject<USkeletalMesh>(defaultLeftHandPath);
+#endif
 
     FString defaultRightHandPath = TEXT("/QuestHands/Meshes/hand_right");
+#if ENGINE_MINOR_VERSION >= 25
+    RightHandMesh = ConstructorHelpersInternal::FindOrLoadObject<USkeletalMesh>(defaultRightHandPath, LOAD_None);
+#else
     RightHandMesh = ConstructorHelpersInternal::FindOrLoadObject<USkeletalMesh>(defaultRightHandPath);
+#endif
 }
 
 //---------------------------------------------------------------------------------------------------------------------

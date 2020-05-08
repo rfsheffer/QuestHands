@@ -15,6 +15,7 @@
             <!-- Oculus Hands Support -->
             <log text="Oculus Quest Hands Tracking Permissions Added!"/>
             <addPermission android:name="oculus.permission.handtracking"/>
+            <addPermission android:name="oculus.permission.HAND_TRACKING"/>
             <addFeature android:name="oculus.software.handtracking" android:required="false"/>
           </true>
         </if>

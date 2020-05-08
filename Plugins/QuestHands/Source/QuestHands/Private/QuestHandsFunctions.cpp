@@ -7,18 +7,7 @@
 
 #if OCULUS_INPUT_SUPPORTED_PLATFORMS
 
-#include "IOculusHMDModule.h"
 #include "OculusHMD.h"
-
-#if PLATFORM_SUPPORTS_PRAGMA_PACK
-#pragma pack (push,8)
-#endif
-
-#include <OVR_Plugin.h>
-
-#if PLATFORM_SUPPORTS_PRAGMA_PACK
-#pragma pack (pop)
-#endif
 
 // Make sure our enums are still ok
 static_assert(ovrpBoneId_Max == (int32)EQHandBones::Hand_PinkyTip + 1, "EQHandBones needs to be aligned with the Oculus enum ovrpBoneId");
@@ -31,7 +20,7 @@ namespace QuestHands
     bool IsOVRAvailable()
     {
     #if OCULUS_INPUT_SUPPORTED_PLATFORMS
-        return IOculusHMDModule::IsAvailable() && ovrp_GetInitialized();
+        return IOculusHMDModule::IsAvailable() && FOculusHMDModule::GetPluginWrapper().GetInitialized() && FApp::HasVRFocus();
     #else
         return false;
     #endif
@@ -63,7 +52,7 @@ bool UQuestHandsFunctions::IsHandTrackingEnabled()
 
 #if OCULUS_INPUT_SUPPORTED_PLATFORMS
     ovrpBool bResult = true;
-    return OVRP_SUCCESS(ovrp_GetHandTrackingEnabled(&bResult)) && bResult;
+    return OVRP_SUCCESS(FOculusHMDModule::GetPluginWrapper().GetHandTrackingEnabled(&bResult)) && bResult;
 #endif
     return false;
 }
@@ -158,7 +147,7 @@ bool UQuestHandsFunctions::GetTrackingState_Internal(const EControllerHand Hand,
     ovrpHand hand = Hand == EControllerHand::Left ? ovrpHand_Left : ovrpHand_Right;
     ovrpStep step = Step == EQHandUpdateStep::UpdateStep_Render ? ovrpStep_Render : ovrpStep_Physics;
     ovrpHandState handState;
-    if(OVRP_SUCCESS(ovrp_GetHandState(step, hand, &handState)))
+    if(OVRP_SUCCESS(FOculusHMDModule::GetPluginWrapper().GetHandState(step, hand, &handState)))
     {
         // Status Out
         stateOut.IsTracked = (handState.Status & ovrpHandStatus_HandTracked) != 0;
@@ -288,7 +277,7 @@ bool UQuestHandsFunctions::GetHandSkeleton_Internal(const EControllerHand Hand, 
 
     ovrpSkeletonType hand = Hand == EControllerHand::Left ? ovrpSkeletonType_HandLeft : ovrpSkeletonType_HandRight;
     ovrpSkeleton skeleton;
-    if(OVRP_SUCCESS(ovrp_GetSkeleton(hand, &skeleton)))
+    if(OVRP_SUCCESS(FOculusHMDModule::GetPluginWrapper().GetSkeleton(hand, &skeleton)))
     {
         OculusHMD::FPose poseOut;
 
@@ -382,7 +371,7 @@ FString UQuestHandsFunctions::GetHandBoneName(const EQHandBones bone, bool left)
 bool UQuestHandsFunctions::SetDynamicFixedFoveatedEnabled(bool enabled)
 {
 #if OCULUS_INPUT_SUPPORTED_PLATFORMS
-    return OVRP_SUCCESS(ovrp_SetVrApiPropertyInt(QuestHands::VRAPI_DYNAMIC_FOVEATION_ENABLED, enabled ? 1 : 0));
+    return OVRP_SUCCESS(FOculusHMDModule::GetPluginWrapper().SetVrApiPropertyInt(QuestHands::VRAPI_DYNAMIC_FOVEATION_ENABLED, enabled ? 1 : 0));
 #else
     return false;
 #endif
